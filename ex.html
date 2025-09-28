@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SIMULATED BREACH — PRANK</title>
+<style>
+  :root{
+    --white:#ffffff;
+    --muted:#7a8086;
+    --g:#00c853; --r:#ff3b30; --y:#ffb300; --b:#0b84ff;
+  }
+  html,body{height:100%;margin:0;background:var(--white);color:var(--g);font-family:Consolas,monospace,monospace;overflow:hidden}
+
+  /* safe blink — moderate frequency & low contrast */
+  @keyframes safeBlink {
+    0%{background:var(--white)}
+    25%{background:#f7f7f7}
+    50%{background:#ffffff}
+    75%{background:#f6f6f6}
+    100%{background:var(--white)}
+  }
+  body.blink{animation:safeBlink 0.8s linear infinite}
+
+  .wrap{position:fixed;inset:0;display:flex;flex-direction:column;padding:18px;box-sizing:border-box}
+  .top{display:flex;gap:12px;align-items:center}
+  .logo{width:56px;height:56;border-radius:8px;background:linear-gradient(180deg,var(--r),#a00000);display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff}
+  .title{font-size:18px;color:#121212;font-weight:800}
+  .subtitle{color:var(--muted);font-size:12px}
+
+  /* main console area */
+  .console{flex:1;margin-top:12px;overflow:hidden;border-radius:8px;background:rgba(0,0,0,0.02);border:1px solid rgba(0,0,0,0.04);position:relative}
+  .log{position:absolute;left:12px;top:12px;right:320px;bottom:12px;overflow:auto;padding:10px;font-family:monospace;font-size:14px;line-height:1.35;color:#0b3d2e}
+
+  /* right panel for placeholder detected info (visible on wide screens) */
+  .side{position:absolute;right:12px;top:12px;width:300px;bottom:12px;background:rgba(0,0,0,0.03);padding:12px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);font-family:monospace;color:#121212}
+  .field{background:rgba(0,0,0,0.01);padding:8px;border-radius:6px;margin-bottom:8px}
+  .field strong{display:block;color:#0b2b1f}
+
+  /* glitch floating words container */
+  .glitch-layer{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:hidden}
+  .glitch-word{position:absolute;font-weight:700;font-size:16px;mix-blend-mode:overlay;opacity:0.95;will-change:transform,opacity}
+
+  /* reveal overlay hidden */
+  .reveal{display:none;position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#06221a;color:#dffbe8;padding:16px;border-radius:12px;border:2px solid rgba(0,0,0,0.06);z-index:9999;font-family:Inter,system-ui}
+
+  .hint{position:fixed;left:12px;bottom:12px;background:rgba(0,0,0,0.03);padding:8px 10px;border-radius:8px;color:var(--muted);font-size:12px}
+
+  @media(max-width:760px){
+    .log{right:0}
+    .side{display:none}
+  }
+</style>
+</head>
+<body class="blink">
+  <div class="wrap" id="wrap">
+    <div class="top">
+      <div class="logo">!</div>
+      <div>
+        <div class="title">hahahahahahahahahahahahahaa</div>
+        <div class="subtitle">hahhhhhhhhhhhhhaaaaaaaaaaaaahahahahahahaahahahahaaaaaaaaaaaaaaaahahahaha</div>
+      </div>
+    </div>
+
+    <div class="console" id="console">
+      <div class="log" id="log" aria-live="polite"></div>
+      <div class="side" aria-hidden="false">
+        <h3 style="margin:0 0 10px 0">DETECTED (PLACEHOLDERS)</h3>
+        <div class="field"><strong>Facebook:</strong> fb.com/*******************ghja*******_account</div>
+        <div class="field"><strong>Zalo:</strong> zalo.me/*************jags******************_account</div>
+        <div class="field"><strong>Gmail:</strong> *******@gmail.com.com</div>
+        <div class="field"><strong>Phone:</strong> +84-XXXX-XXX-XXX</div>
+        <div class="field"><strong>Bank:</strong> Acct **** 1234</div>
+      </div>
+      <div class="glitch-layer" id="glitch"></div>
+    </div>
+  </div>
+
+  <div class="reveal" id="reveal">hahahhhhhhahahahahahahahahahahahahahahahahaa</div>
+  <div class="hint">hahahahahahahahaaaaaaaaaaaaahahhhhhhhhhahahaa</div>
+
+<script>
+/* Auto-running simulated prank (no audio)
+   - Random multicolor glitch words spawn across the white background
+   - Log lines (Hacking Facebook..., etc.) run in the left console
+   - Tap anywhere: request fullscreen (if allowed) and intensify glitch
+   - Hidden stop: type 'reveal' or tap top-left 5 times
+*/
+
+const logEl = document.getElementById('log');
+const glitchEl = document.getElementById('glitch');
+const revealEl = document.getElementById('reveal');
+let running = true;
+let intensified = false;
+
+const actions = [
+  'Initializing breach engine...',
+  'Loading stealth modules...',
+  'Found target: Mobile Device',
+  'Spawning threads...',
+  'Bypassing lockscreen',
+  'Accessing Facebook session...',
+  'Accessing Zalo cache...',
+  'Querying Gmail tokens...',
+  'Extracting SMS inbox...',
+  'Mapping payment methods (SAMPLE)...',
+  'Phone number detected: +84-09XX-XXX-XXX',
+  'Bank account mapping: ****1234',
+  'Uploading sample-log.txt to remote...',
+  'Cleaning traces...'
+];
+
+const glitchWords = [
+  'AUTH', 'TOKEN', 'SESSION', '0x', 'BREACH', 'EXFIL', 'ROOT', 'DB', 'API', 'PASSWORD', 'SMS', '2FA', 'COOKIE', 'CACHE', 'PAYLOAD', 'BACKDOOR', 'THREAD', 'KERNEL', 'PROC'
+];
+
+const colors = ['#00c853','#0b84ff','#ff3b30','#ffb300','#121212','#000000','#ffffff'];
+
+// push a log line
+function pushLog(text, cls){
+  const el = document.createElement('div');
+  el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + text;
+  el.className = cls || '';
+  logEl.appendChild(el);
+  while(logEl.children.length > 600) logEl.removeChild(logEl.firstChild);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// spawn a glitch word at random position
+function spawnGlitch(intense){
+  const w = document.createElement('div');
+  w.className = 'glitch-word';
+  const txt = glitchWords[Math.floor(Math.random()*glitchWords.length)];
+  w.textContent = txt + (Math.random()>0.6? '-' + Math.floor(Math.random()*999): '');
+  const size = 12 + Math.floor(Math.random()*24) + (intense? Math.floor(Math.random()*20):0);
+  w.style.fontSize = size + 'px';
+  const x = Math.random()*100; // percent
+  const y = Math.random()*100; // percent
+  w.style.left = x + '%';
+  w.style.top = y + '%';
+  // random color from palette
+  w.style.color = colors[Math.floor(Math.random()*colors.length)];
+  // random rotation and opacity
+  const rot = (Math.random()*40 - 20) * (intense?1.5:1);
+  w.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
+  w.style.opacity = 0.6 + Math.random()*0.4;
+
+  // subtle animation: move slightly and fade
+  const dur = 2000 + Math.floor(Math.random()*3000) - (intense?800:0);
+  w.animate([
+    { transform: `translate(-50%,-50%) translateY(0px) rotate(${rot}deg)`, opacity: w.style.opacity },
+    { transform: `translate(-50%,-50%) translateY(${(intense? -30:-10)}px) rotate(${rot+5}deg)`, opacity: 0 }
+  ], { duration: dur, easing: 'ease-out' });
+
+  glitchEl.appendChild(w);
+  // remove after animation
+  setTimeout(()=>{ try{ glitchEl.removeChild(w); }catch(e){} }, dur + 50);
+}
+
+// continuous spawner for glitch words
+function glitchLoop(){
+  if(!running) return;
+  // spawn multiple per tick if intensified
+  const baseCount = intensified? (3 + Math.floor(Math.random()*6)) : (1 + Math.floor(Math.random()*3));
+  for(let i=0;i<baseCount;i++) spawnGlitch(intensified);
+  // schedule next
+  const delay = intensified? (50 + Math.floor(Math.random()*120)) : (120 + Math.floor(Math.random()*260));
+  setTimeout(glitchLoop, delay);
+}
+
+// log loop
+function logLoop(){
+  if(!running) return;
+  const txt = actions[Math.floor(Math.random()*actions.length)];
+  pushLog(txt);
+  const delay = 400 + Math.floor(Math.random()*900) - (intensified?200:0);
+  setTimeout(logLoop, delay);
+}
+
+// start
+pushLog('******');
+pushLog('hahaha: hahahaa. hahaha : type "hahhaa" or tap top-left 5×.');
+glitchLoop();
+logLoop();
+
+// clicking/tapping intensifies and requests fullscreen
+function intensify(){
+  if(intensified) return;
+  intensified = true;
+  document.body.style.transition = 'filter 300ms';
+  document.body.style.filter = 'contrast(1.05)';
+  // request full screen if available
+  const el = document.documentElement;
+  if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
+  else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen().catch(()=>{});
+  // spawn an immediate burst
+  for(let i=0;i<30;i++) spawnGlitch(true);
+}
+
+window.addEventListener('click', () => intensify(), {passive:true});
+window.addEventListener('touchstart', () => intensify(), {passive:true});
+
+// hidden stop: type 'reveal' OR tap top-left 5 times
+let typed = '';
+document.addEventListener('keydown', (e)=>{
+  if(!running) return;
+  if(e.key.length === 1){ typed += e.key.toLowerCase(); if(typed.endsWith('reveal')) stopPrank(); if(typed.length>30) typed = typed.slice(-20); }
+  if(e.key === 'Escape') stopPrank();
+});
+
+let tlClicks = 0; const tlRegion = {x:0,y:0,w:120,h:120};
+window.addEventListener('touchstart', (ev)=>{
+  if(!running) return;
+  const t = ev.touches[0]; if(!t) return; const x = t.clientX, y = t.clientY;
+  if(x >= tlRegion.x && x <= tlRegion.x + tlRegion.w && y >= tlRegion.y && y <= tlRegion.y + tlRegion.h){ tlClicks++; if(tlClicks>=5) stopPrank(); setTimeout(()=>{ tlClicks = Math.max(0, tlClicks-1); }, 1500); }
+}, {passive:true});
+
+window.addEventListener('click', (ev)=>{
+  if(!running) return; const x = ev.clientX, y = ev.clientY; if(x >= tlRegion.x && x <= tlRegion.x + tlRegion.w && y >= tlRegion.y && y <= tlRegion.y + tlRegion.h){ tlClicks++; if(tlClicks>=5) stopPrank(); setTimeout(()=>{ tlClicks = Math.max(0, tlClicks-1); }, 1500); }
+});
+
+function stopPrank(){
+  if(!running) return; running = false;
+  // stop blink
+  document.body.classList.remove('blink');
+  pushLog('*** hahahahahahahaa ***', '');
+  pushLog('hahahahahahahaaaaaahahahaaa.', '');
+  revealEl.style.display = 'block';
+}
+
+// best-effort: if user navigates away, stop loops
+window.addEventListener('visibilitychange', ()=>{ if(document.hidden) { /* pause if needed */ } });
+
+</script>
+</body>
+</html>
